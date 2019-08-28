@@ -1,7 +1,7 @@
 import uuid
 
 from django import template
-from django.db.models import Model
+from django.db.models import Model, QuerySet
 from django.utils.safestring import mark_safe
 
 from ..models_base import get_perm
@@ -27,10 +27,12 @@ def do_if_unset(value, arg):
 
 @register.filter(name="model_name")
 def do_model_name(value):
-    """Returns the model name of a model or model instance."""
+    """Returns the model name of a Model class, Model instance or QuerySet."""
     if isinstance(value, Model) or isinstance(value, type) and issubclass(value, Model):
         return value._meta.model_name
-    raise TypeError("%r is neither a model nor a model instance" % value)
+    if isinstance(value, QuerySet):
+        return value.model._meta.model_name
+    raise TypeError("%r is no Model class, Model instance or QuerySet" % value)
 
 
 @register.filter(name="get_perm", is_safe=True)

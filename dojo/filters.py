@@ -293,14 +293,6 @@ class DojoFilterSetNew(FilterSet):
         )
 
     @cached_property
-    def model_name(self):
-        """Returns the _meta.model_name attribute of the underlying model.
-
-        This is used to get the model name in templates.
-        """
-        return self._meta.model._meta.model_name
-
-    @cached_property
     def min_page_size(self):
         """Returns the minimum selectable page size for use in templates."""
         if self.page_sizes:

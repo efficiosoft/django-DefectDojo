@@ -176,6 +176,9 @@
                     </tr>
                 {% endif %}
                 <tr>
+                    {% if finding.primary_finding is not None %}
+                        <th>Primary Finding</th>
+                    {% endif %}
                     <th>Severity</th>
                     {% if 'enable_finding_sla'|fetch_system_setting %}
                     <th>SLA</th>
@@ -188,7 +191,7 @@
                         <th>Acceptance</th>
                     {% endif %}
                     {% if finding.duplicate_finding_set %}
-                    <th>Parent</th>
+                        <th>Duplicates</th>
                     {% endif %}
                     <th>Type</th>
                     <th>Date discovered</th>
@@ -207,6 +210,9 @@
                     <th>Found by</th>
                 </tr>
                 <tr>
+                    {% if finding.primary_finding is not None %}
+                        <td>{% include "./snippets/dojo_obj.html" with object=finding.primary_finding %}</td>
+                    {% endif %}
                     <td>
                         <span class="label severity severity-{{ finding.severity }}">
                             {% if finding.severity %}
@@ -288,6 +294,13 @@
             </table>
         </div>
     </div>
+
+    {% with sub_findings=finding.sub_findings.all %}
+        {% if sub_findings %}
+            {% include "./snippets/queryset_panel.html" with title="Sub Findings" heading_level=4 qs=sub_findings finding_hide_primary_finding=True %}
+        {% endif %}
+    {% endwith %}
+
     {% if finding.static_finding or finding.line > 0 %}
         <div class="panel panel-default">
             <table id="error_notes" class="table-striped table table-condensed table-hover centered">

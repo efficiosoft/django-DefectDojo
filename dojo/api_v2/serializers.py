@@ -391,7 +391,65 @@ class FindingSerializer(TaggitSerializer, serializers.ModelSerializer):
 
     class Meta:
         model = Finding
-        fields = '__all__'
+        fields = [
+            "active",
+            "created",
+            "cve",
+            "cwe",
+            "date",
+            "defect_review_requested_by",
+            "description",
+            "duplicate",
+            "duplicate_finding",
+            "duplicate_list",
+            "dynamic_finding",
+            "endpoints",
+            "false_p",
+            "file_path",
+            "found_by",
+            "hash_code",
+            "id",
+            "images",
+            "impact",
+            "is_Mitigated",
+            "is_template",
+            "jira_change",
+            "jira_creation",
+            "last_reviewed",
+            "last_reviewed_by",
+            "line",
+            "line_number",
+            "mitigated",
+            "mitigated_by",
+            "mitigation",
+            "notes",
+            "numerical_severity",
+            "out_of_scope",
+            "param",
+            "payload",
+            "primary_finding",
+            "references",
+            "reporter",
+            "review_requested_by",
+            "reviewers",
+            "scanner_confidence",
+            "severity",
+            "severity_justification",
+            "sourcefile",
+            "sourcefilepath",
+            "static_finding",
+            "steps_to_reproduce",
+            "sub_findings",
+            "tags",
+            "test",
+            "thread_id",
+            "title",
+            "under_defect_review",
+            "under_review",
+            "url",
+            "verified",
+        ]
+        read_only_fields = ["sub_findings"]
 
     def validate(self, data):
         if self.context['request'].method == 'PATCH':
@@ -411,6 +469,14 @@ class FindingSerializer(TaggitSerializer, serializers.ModelSerializer):
             raise serializers.ValidationError('False positive findings cannot '
                                               'be verified.')
         return data
+
+    def validate_primary_finding(self, primary):
+        if primary is not None and not self.instance.can_be_sub_finding_of(primary):
+            raise serializers.ValidationError(
+                "%r can't be set as primary finding of %r."
+                % (primary.pk, self.instance.pk)
+            )
+        return primary
 
 
 class FindingCreateSerializer(TaggitSerializer, serializers.ModelSerializer):
@@ -432,7 +498,65 @@ class FindingCreateSerializer(TaggitSerializer, serializers.ModelSerializer):
 
     class Meta:
         model = Finding
-        exclude = ['images']
+        fields = [
+            "active",
+            "created",
+            "cve",
+            "cwe",
+            "date",
+            "defect_review_requested_by",
+            "description",
+            "duplicate",
+            "duplicate_finding",
+            "duplicate_list",
+            "dynamic_finding",
+            "endpoints",
+            "false_p",
+            "file_path",
+            "found_by",
+            "hash_code",
+            "id",
+            "images",
+            "impact",
+            "is_Mitigated",
+            "is_template",
+            "jira_change",
+            "jira_creation",
+            "last_reviewed",
+            "last_reviewed_by",
+            "line",
+            "line_number",
+            "mitigated",
+            "mitigated_by",
+            "mitigation",
+            "notes",
+            "numerical_severity",
+            "out_of_scope",
+            "param",
+            "payload",
+            "primary_finding",
+            "references",
+            "reporter",
+            "review_requested_by",
+            "reviewers",
+            "scanner_confidence",
+            "severity",
+            "severity_justification",
+            "sourcefile",
+            "sourcefilepath",
+            "static_finding",
+            "steps_to_reproduce",
+            "sub_findings",
+            "tags",
+            "test",
+            "thread_id",
+            "title",
+            "under_defect_review",
+            "under_review",
+            "url",
+            "verified",
+        ]
+        read_only_fields = ["images", "sub_findings"]
         extra_kwargs = {
             'reporter': {'default': serializers.CurrentUserDefault()},
         }
@@ -444,6 +568,14 @@ class FindingCreateSerializer(TaggitSerializer, serializers.ModelSerializer):
         if data['false_p'] and data['verified']:
             raise serializers.ValidationError('False positive findings cannot '
                                               'be verified.')
+        primary = data.get("primary_finding")
+        if (
+            primary is not None
+            and (data["test"] != primary.test or not primary.can_have_children)
+        ):
+            raise serializers.ValidationError(
+                "%r can't be set as primary finding." % primary.pk
+            )
         return data
 
 

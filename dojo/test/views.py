@@ -207,7 +207,7 @@ def add_findings(request, tid):
     form_error = False
     enabled = False
     jform = None
-    form = AddFindingForm(initial={'date': timezone.now().date()})
+    form = AddFindingForm(initial={'date': timezone.now().date()}, test=test)
 
     if get_system_setting('enable_jira') and JIRA_PKey.objects.filter(product=test.engagement.product).count() != 0:
         enabled = JIRA_PKey.objects.get(product=test.engagement.product).push_all_issues
@@ -216,7 +216,7 @@ def add_findings(request, tid):
         jform = None
 
     if request.method == 'POST':
-        form = AddFindingForm(request.POST)
+        form = AddFindingForm(request.POST, test=test)
         if form['active'].value() is False or form['verified'].value() is False and 'jiraform-push_to_jira' in request.POST:
             error = ValidationError('Findings must be active and verified to be pushed to JIRA',
                                     code='not_active_or_verified')

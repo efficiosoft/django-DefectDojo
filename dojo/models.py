@@ -1122,6 +1122,14 @@ class Test(models.Model):
                 'url': reverse('view_test', args=(self.id,))}]
         return bc
 
+    def get_primary_finding_choices(self, finding=None):
+        qs = Finding.objects.filter(test=self)
+        if finding is not None:
+            if not finding.can_be_sub_finding:
+                return qs.none()
+            qs = qs.exclude(Q(pk=finding.pk) | ~Q(primary_finding=None))
+        return qs.order_by("title")
+
     def verified_finding_count(self):
         return Finding.objects.filter(test=self, verified=True).count()
 
@@ -1143,6 +1151,7 @@ class Finding(models.Model):
         return Test.objects.for_user.as_q(user).prefix("test")
 
     title = models.TextField(max_length=1000)
+    primary_finding = models.ForeignKey("self", blank=True, null=True, on_delete=models.SET_NULL, related_name="sub_findings")
     date = models.DateField(default=get_current_date)
     cwe = models.IntegerField(default=0, null=True, blank=True)
     cve_regex = RegexValidator(regex=r'^CVE-\d{4}-\d{4,7}$',
@@ -1220,6 +1229,22 @@ class Finding(models.Model):
 
     class Meta:
         ordering = ('numerical_severity', '-date', 'title')
+
+    def can_be_sub_finding_of(self, other):
+        return (
+            self != other
+            and self.test == other.test
+            and other.can_have_sub_findings
+            and self.can_be_sub_finding
+        )
+
+    @property
+    def can_be_sub_finding(self):
+        return not self.sub_findings.exists()
+
+    @property
+    def can_have_sub_findings(self):
+        return self.primary_finding is None
 
     def compute_hash_code(self):
         hash_string = self.title + str(self.cwe) + str(self.line) + str(self.file_path) + self.description

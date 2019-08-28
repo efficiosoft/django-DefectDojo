@@ -1,0 +1,56 @@
+{% comment %}
+This snippet produces a panel containing a table of objects, like the one in
+filter_panel.html, but without filtering, pagination and row ticking.
+
+Parameters:
+* DojoQuerySet qs:
+  QuerySet of the objects to display
+* str header_template (""):
+  Path of the template to insert as header of the table of displayed objects. If
+  omitted, a template named "dojo/<modelname>_filter_header.html" will be loaded
+  with the full context.
+* str row_template (""):
+  Path of the template used to represent an object in the table.
+  If omitted, a template named "dojo/<modelname>_filter_row.html" will be rendered
+  for each item to be displayed with the full context + the item to display passed
+  under the name "object".
+* str table_class ("table-hover table-responsive table-striped"):
+
+All parameters of panel.html can be used as well.
+{% endcomment %}
+
+
+{% as extra_heading %}
+    <div class="alert alert-info panel-header-alert">
+        {{ qs.count }} objects
+    </div>
+    {{ extra_heading }}
+{% endas %}
+
+
+{% as body %}
+    {{ body }}
+    <table class="table {{ table_class|if_unset:"table-hover table-responsive table-striped" }}">
+        <thead>
+            {% if not header_template %}
+                {% as header_template %}dojo/{{ qs|model_name|safe }}_filter_header.html{% endas %}
+            {% endif %}
+            {% include header_template with tickable=False %}
+        </thead>
+        <tbody>
+            {% if not row_template %}
+                {% as row_template %}dojo/{{ qs|model_name|safe }}_filter_row.html{% endas %}
+            {% endif %}
+            {% for object in qs %}
+                {% include row_template with object=object tickable=False %}
+            {% empty %}
+                <tr>
+                    <td colspan="100" style="padding-top:3em; text-align:center;">No items available.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endas %}
+
+
+{% include "./panel.html" %}

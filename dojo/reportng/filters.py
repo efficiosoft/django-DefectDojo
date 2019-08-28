@@ -129,9 +129,12 @@ class FindingFilterSet(DojoFilterSetNew):
     """
 
     title = djf.CharFilter(lookup_expr="icontains", label="Title")
+    # Choices inserted after initialization
+    primary_finding = djf.ModelMultipleChoiceFilter(queryset=Finding.objects.none())
     date = DateRangeFilter()
     severity = djf.MultipleChoiceFilter(choices=SEVERITY_CHOICES)
     test__test_type = djf.ModelMultipleChoiceFilter(queryset=Test_Type.objects.all())
+    # Choices inserted after initialization
     cwe = djf.MultipleChoiceFilter(choices=[])
     cve = djf.CharFilter(lookup_expr="icontains", label="CVE contains")
     sourcefile = djf.CharFilter(lookup_expr="icontains", label="Source file contains")
@@ -161,6 +164,7 @@ class FindingFilterSet(DojoFilterSetNew):
         OrderedDict(
             (
                 ("title", "Title"),
+                ("primary_finding__title", "Primary Finding Title"),
                 ("sourcefile", "Source File"),
                 ("sourcefilepath", "Source File Path"),
                 ("cve", "CVE"),
@@ -171,6 +175,9 @@ class FindingFilterSet(DojoFilterSetNew):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.form.fields["primary_finding"].queryset = self.queryset.exclude(
+            sub_findings=None
+        )
         self.form.fields["cwe"].choices = (
             (cwe, cwe)
             for cwe in sorted(

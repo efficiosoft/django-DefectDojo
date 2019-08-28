@@ -97,6 +97,14 @@ Parameters:
                 <li role="separator" class="divider"></li>
             {% endif %}
         {% endas %}
+        {% as extra_repr %}
+            {% if not finding_hide_primary_finding and object.primary_finding is not None %}
+                <small>
+                    <strong>↳ Part of:</strong>
+                    {% include "dojo/snippets/dojo_obj.html" with object=object.primary_finding show_actions_menu=False %}
+                </small>
+            {% endif %}
+        {% endas %}
 
     {% elif model_name == "reportng" %}
         {% as object_name %}{{ object.title }}{% endas %}

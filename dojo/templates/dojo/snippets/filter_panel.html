@@ -68,13 +68,13 @@ or disable ticking objects using tickable=False.
     <table class="table {{ table_class|if_unset:"table-hover table-responsive table-striped" }}">
         <thead>
             {% if not header_template %}
-                {% as header_template %}dojo/{{ filter.model_name }}_filter_header.html{% endas %}
+                {% as header_template %}dojo/{{ filter.qs|model_name|safe }}_filter_header.html{% endas %}
             {% endif %}
             {% include header_template %}
         </thead>
         <tbody>
             {% if not row_template %}
-                {% as row_template %}dojo/{{ filter.model_name }}_filter_row.html{% endas %}
+                {% as row_template %}dojo/{{ filter.qs|model_name|safe }}_filter_row.html{% endas %}
             {% endif %}
             {% for object in filter.page %}
                 {% include row_template with object=object %}
@@ -88,6 +88,7 @@ or disable ticking objects using tickable=False.
     {% include "./pagination.html" with filter=filter only %}
     {{ footer }}
 {% endas %}
+
 
 {# The .filter-panel-collapse and .filter-panel-footer classes are added to allow reacting to collapse events from JS and apply custom footer styling. #}
 {% include "./panel.html" with collapse_footer=collapse_objects|if_unset:False open=open|if_unset:filter.panel_open panel_collapse_class=panel_collapse_class|addstr:" filter-panel-collapse" panel_footer_class=panel_footer_class|addstr:" filter-panel-footer" %}

@@ -5,8 +5,8 @@ import logging
 import mimetypes
 import os
 import shutil
-
 from collections import OrderedDict
+
 from django.db import models
 from django.db.models.functions import Length
 from django.conf import settings
@@ -531,7 +531,7 @@ def delete_finding(request, fid):
 def edit_finding(request, fid):
     finding = get_object_or_404(Finding, id=fid)
     old_status = finding.status()
-    form = FindingForm(instance=finding, template=False)
+    form = FindingForm(instance=finding, template=False, test=finding.test)
     form.initial['tags'] = [tag.name for tag in finding.tags]
     form_error = False
     jform = None
@@ -540,14 +540,13 @@ def edit_finding(request, fid):
         enabled = True
     except:
         enabled = False
-        pass
 
     if get_system_setting('enable_jira') and JIRA_PKey.objects.filter(
             product=finding.test.engagement.product) != 0:
         jform = JIRAFindingForm(enabled=enabled, prefix='jiraform')
 
     if request.method == 'POST':
-        form = FindingForm(request.POST, instance=finding, template=False)
+        form = FindingForm(request.POST, instance=finding, template=False, test=finding.test)
         source = request.POST.get("source", "")
         page = request.POST.get("page", "")
 

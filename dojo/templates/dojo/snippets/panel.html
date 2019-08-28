@@ -7,7 +7,7 @@ Most parameters have sensible default values for many use cases, making using th
 panel snippet easy.
 
 Parameters:
-* str id:
+* str id (random UUID):
   A per page unique string to prepend to the HTML id's of this panel's DOM elements.
 * str title:
   A title to show in the panel's heading area. This is also spoken to screenreader
@@ -32,6 +32,8 @@ Parameters:
 * str panel_footer_class (""):
 {% endcomment %}
 
+
+{% if not id %}{% as id %}{% uuid %}{% endas %}{% endif %}
 
 <div class="panel panel-default {{ panel_class }}" id="{{ id }}">
     {% if add_heading|if_unset:True %}

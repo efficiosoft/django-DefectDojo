@@ -15,6 +15,25 @@
     }
 {% endblock %}
 {% block content %}
+    {% with sub_findings=finding.sub_findings.all %}
+        {% if sub_findings %}
+            {% block sub_findings_panel %}
+                {% as footer %}
+                    <strong>Note:</strong>
+                    This finding can't be made a sub finding as long as it's a primary finding of others (i.e. has sub findings itself).
+                {% endas %}
+                {% include "./snippets/queryset_panel.html" with title="Sub Findings" heading_level=3 collapse_footer=False open=False qs=sub_findings finding_hide_primary_finding=True %}
+            {% endblock %}
+        {% elif finding.primary_finding is not None %}
+            {% block primary_finding_panel %}
+                {% as body %}
+                    {% include "./snippets/dojo_obj.html" with object=finding.primary_finding %}
+                {% endas %}
+                {% include "./snippets/panel.html" with title="Primary Finding" heading_level=3 collapsible=False %}
+            {% endblock %}
+        {% endif %}
+    {% endwith %}
+
     <h3> Edit a Finding </h3>
     {% if temp %}
 

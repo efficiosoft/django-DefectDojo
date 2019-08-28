@@ -803,6 +803,11 @@ class AddFindingForm(forms.ModelForm):
     is_template = forms.BooleanField(label="Create Template?", required=False,
                                      help_text="A new finding template will be created from this finding.")
 
+    def __init__(self, *args, **kwargs):
+        test = kwargs.pop("test")
+        super().__init__(*args, **kwargs)
+        self.fields["primary_finding"].queryset = test.get_primary_finding_choices()
+
     def clean(self):
         # self.fields['endpoints'].queryset = Endpoint.objects.all()
         cleaned_data = super(AddFindingForm, self).clean()
@@ -816,7 +821,7 @@ class AddFindingForm(forms.ModelForm):
 
     class Meta:
         model = Finding
-        order = ('title', 'severity', 'endpoints', 'description', 'impact')
+        order = ('title', 'parent', 'severity', 'endpoints', 'description', 'impact')
         exclude = ('reporter', 'url', 'numerical_severity', 'endpoint', 'images', 'under_review', 'reviewers',
                    'review_requested_by', 'is_Mitigated', 'jira_creation', 'jira_change')
 
@@ -909,17 +914,23 @@ class FindingForm(forms.ModelForm):
                                      help_text="A new finding template will be created from this finding.")
 
     def __init__(self, *args, **kwargs):
+        instance = kwargs.get("instance")
         template = kwargs.pop('template')
+        test = kwargs.pop("test")
+        super(FindingForm, self).__init__(*args, **kwargs)
+
         # Get tags from a template
         if template:
             tags = Tag.objects.usage_for_model(Finding_Template)
         # Get tags from a finding
         else:
             tags = Tag.objects.usage_for_model(Finding)
-
         t = [(tag.name, tag.name) for tag in tags]
-        super(FindingForm, self).__init__(*args, **kwargs)
         self.fields['tags'].widget.choices = t
+
+        self.fields["primary_finding"].queryset = test.get_primary_finding_choices(instance)
+        if not instance.can_be_sub_finding:
+            self.fields["primary_finding"].disabled = True
 
     def clean(self):
         cleaned_data = super(FindingForm, self).clean()
@@ -933,7 +944,7 @@ class FindingForm(forms.ModelForm):
 
     class Meta:
         model = Finding
-        order = ('title', 'severity', 'endpoints', 'description', 'impact')
+        order = ('title', 'parent', 'severity', 'endpoints', 'description', 'impact')
         exclude = ('reporter', 'url', 'numerical_severity', 'endpoint', 'images', 'under_review', 'reviewers',
                    'review_requested_by', 'is_Mitigated', 'jira_creation', 'jira_change')
 
