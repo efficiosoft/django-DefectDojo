@@ -15,13 +15,14 @@ from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.core import serializers
 from django.urls import reverse
-from django.http import Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.http import HttpResponseRedirect, HttpResponseForbidden
 from django.http import StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.utils import formats
 from django.utils.safestring import mark_safe
 from django.utils import timezone
+from django.views.generic import DetailView
 from tagging.models import Tag
 from itertools import chain
 
@@ -32,6 +33,7 @@ from dojo.forms import NoteForm, CloseFindingForm, FindingForm, PromoteFindingFo
     DeleteFindingTemplateForm, FindingImageFormSet, JIRAFindingForm, ReviewFindingForm, ClearFindingReviewForm, \
     DefectFindingForm, StubFindingForm, DeleteFindingForm, DeleteStubFindingForm, ApplyFindingTemplateForm, \
     FindingFormID, FindingBulkUpdateForm, MergeFindings
+from dojo.mixins import DojoPermissionViewMixin
 from dojo.models import Product_Type, Finding, Notes, NoteHistory, \
     Risk_Acceptance, BurpRawRequestResponse, Stub_Finding, Endpoint, Finding_Template, FindingImage, \
     FindingImageAccessToken, JIRA_Issue, JIRA_PKey, Dojo_User, Cred_Mapping, Test, Product, User, Engagement
@@ -1627,3 +1629,21 @@ def finding_bulk_update_all(request, pid=None):
                                      extra_tags='alert-danger')
 
         return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+
+
+class FindingImageView(DojoPermissionViewMixin, DetailView):
+    model = FindingImage
+
+    def get(self, request, pk, size):
+        try:
+            size_attr = {
+                "o": "image",
+                "t": "image_thumbnail",
+                "s": "image_small",
+                "m": "image_medium",
+                "l": "image_large",
+            }[size]
+        except KeyError:
+            raise Http404("invalid size")
+        img = getattr(self.get_object(), size_attr)
+        return FileResponse(img, as_attachment=False)

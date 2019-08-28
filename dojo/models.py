@@ -8,13 +8,10 @@ from django.conf import settings
 from watson import search as watson
 from auditlog.registry import auditlog
 from django.contrib import admin
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
-from django.utils.deconstruct import deconstructible
 from django.utils.timezone import now
 from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToCover
@@ -26,36 +23,14 @@ from django import forms
 from django.utils.translation import gettext as _
 from dojo.signals import dedupe_signal
 
+from .models_base import DojoQuerySet, Q, UniqueUploadNameProvider, User
+from .reportng import models as reportng_models  # noqa: F401
+
+
 fmt = getattr(settings, 'LOG_FORMAT', None)
 lvl = getattr(settings, 'LOG_LEVEL', logging.DEBUG)
 
 logging.basicConfig(format=fmt, level=lvl)
-
-
-@deconstructible
-class UniqueUploadNameProvider:
-    """
-    A callable to be passed as upload_to parameter to FileField.
-
-    Uploaded files will get random names based on UUIDs inside the given directory;
-    strftime-style formatting is supported within the directory path. If keep_basename
-    is True, the original file name is prepended to the UUID. If keep_ext is disabled,
-    the filename extension will be dropped.
-    """
-
-    def __init__(self, directory=None, keep_basename=False, keep_ext=True):
-        self.directory = directory
-        self.keep_basename = keep_basename
-        self.keep_ext = keep_ext
-
-    def __call__(self, model_instance, filename):
-        base, ext = os.path.splitext(filename)
-        filename = "%s_%s" % (base, uuid4()) if self.keep_basename else str(uuid4())
-        if self.keep_ext:
-            filename += ext
-        if self.directory is None:
-            return filename
-        return os.path.join(now().strftime(self.directory), filename)
 
 
 class Regulation(models.Model):
@@ -255,9 +230,6 @@ def get_current_datetime():
     return timezone.now()
 
 
-User = get_user_model()
-
-
 # proxy class for convenience and UI
 class Dojo_User(User):
     class Meta:
@@ -373,6 +345,9 @@ class Product_Type(models.Model):
                'url': reverse('edit_product_type', args=(self.id,))}]
         return bc
 
+    class Meta:
+        ordering = ('name',)
+
 
 class Product_Line(models.Model):
     name = models.CharField(max_length=300)
@@ -390,6 +365,8 @@ class Report_Type(models.Model):
 
 
 class Test_Type(models.Model):
+    objects = DojoQuerySet.as_manager()
+
     name = models.CharField(max_length=200, unique=True)
     static_tool = models.BooleanField(default=False)
     dynamic_tool = models.BooleanField(default=False)
@@ -495,6 +472,10 @@ class Product(models.Model):
         (VERY_LOW_CRITICALITY, _('Very Low')),
         (NONE_CRITICALITY, _('None')),
     )
+
+    @DojoQuerySet.manager_with_for_user
+    def objects(base, user):
+        return Q() if user.is_staff else Q(authorized_users__in=[user])
 
     name = models.CharField(max_length=255, unique=True)
     description = models.CharField(max_length=4000)
@@ -798,6 +779,10 @@ class Engagement_Type(models.Model):
 
 
 class Engagement(models.Model):
+    @DojoQuerySet.manager_with_for_user
+    def objects(base, user):
+        return Product.objects.for_user.as_q(user).prefix("product")
+
     name = models.CharField(max_length=300, null=True, blank=True)
     description = models.CharField(max_length=2000, null=True, blank=True)
     version = models.CharField(max_length=100, null=True, blank=True, help_text="Version of the product the engagement tested.")
@@ -1095,6 +1080,10 @@ class Development_Environment(models.Model):
 
 
 class Test(models.Model):
+    @DojoQuerySet.manager_with_for_user
+    def objects(base, user):
+        return Engagement.objects.for_user.as_q(user).prefix("engagement")
+
     engagement = models.ForeignKey(Engagement, editable=False, on_delete=models.CASCADE)
     lead = models.ForeignKey(User, editable=True, null=True, on_delete=models.CASCADE)
     test_type = models.ForeignKey(Test_Type, on_delete=models.CASCADE)
@@ -1136,6 +1125,9 @@ class Test(models.Model):
     def verified_finding_count(self):
         return Finding.objects.filter(test=self, verified=True).count()
 
+    class Meta:
+        ordering = ('title',)
+
 
 class VA(models.Model):
     address = models.TextField(editable=False, default="none")
@@ -1146,6 +1138,10 @@ class VA(models.Model):
 
 
 class Finding(models.Model):
+    @DojoQuerySet.manager_with_for_user
+    def objects(base, user):
+        return Test.objects.for_user.as_q(user).prefix("test")
+
     title = models.TextField(max_length=1000)
     date = models.DateField(default=get_current_date)
     cwe = models.IntegerField(default=0, null=True, blank=True)
@@ -1709,6 +1705,10 @@ class Report(models.Model):
 
 
 class FindingImage(models.Model):
+    @DojoQuerySet.manager_with_for_user
+    def objects(base, user):
+        return Finding.objects.for_user.as_q(user).prefix("finding")
+
     image = models.ImageField(upload_to=UniqueUploadNameProvider('finding_images'))
     caption = models.CharField(max_length=500, blank=True)
     image_thumbnail = ImageSpecField(source='image',

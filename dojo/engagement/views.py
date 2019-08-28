@@ -19,7 +19,7 @@ from django.contrib.admin.utils import NestedObjects
 from django.db import DEFAULT_DB_ALIAS
 
 from dojo.engagement.services import close_engagement, reopen_engagement
-from dojo.filters import EngagementFilter
+from dojo.filters import EngagementByProductFilter
 from dojo.forms import CheckForm, \
     UploadThreatForm, UploadRiskForm, NoteForm, DoneForm, \
     EngForm, TestForm, ReplaceRiskAcceptanceForm, AddFindingsRiskAcceptanceForm, DeleteEngagementForm, ImportScanForm, \
@@ -64,7 +64,7 @@ def engagement_calendar(request):
 
 @user_passes_test(lambda u: u.is_staff)
 def engagement(request):
-    filtered = EngagementFilter(
+    filtered = EngagementByProductFilter(
         request.GET,
         queryset=Product.objects.filter(
             ~Q(engagement=None),

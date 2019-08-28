@@ -17,7 +17,7 @@ from django.db.models import Sum, Count, Q
 from django.contrib.admin.utils import NestedObjects
 from django.db import DEFAULT_DB_ALIAS
 from dojo.templatetags.display_tags import get_level
-from dojo.filters import ProductFilter, ProductFindingFilter, EngagementFilter
+from dojo.filters import ProductFilter, ProductFindingFilter, EngagementByProductFilter
 from dojo.forms import ProductForm, EngForm, DeleteProductForm, DojoMetaDataForm, JIRAPKeyForm, JIRAFindingForm, AdHocFindingForm, \
                        EngagementPresetsForm, DeleteEngagementPresetsForm
 from dojo.models import Product_Type, Finding, Product, Engagement, ScanSettings, Risk_Acceptance, Test, JIRA_PKey, Finding_Template, \
@@ -56,7 +56,7 @@ def product(request):
         tags = request.GET.getlist('tags', [])
         initial_queryset = TaggedItem.objects.get_by_model(initial_queryset, Tag.objects.filter(name__in=tags))
     """
-    prods = ProductFilter(request.GET, queryset=initial_queryset, user=request.user)
+    prods = ProductFilter(request.GET, queryset=initial_queryset, request=request)
     prod_list = get_page_items(request, prods.qs, 25)
     add_breadcrumb(title="Product List", top_level=not len(request.GET), request=request)
     return render(request,
@@ -144,7 +144,7 @@ def view_product_metrics(request, pid):
     prod = get_object_or_404(Product, id=pid)
     engs = Engagement.objects.filter(product=prod, active=True)
 
-    result = EngagementFilter(
+    result = EngagementByProductFilter(
         request.GET,
         queryset=Engagement.objects.filter(product=prod, active=False).order_by('-target_end'))
 
@@ -363,21 +363,21 @@ def view_engagements(request, pid, engagement_type="Interactive"):
     default_page_num = 10
 
     # In Progress Engagements
-    result_engs = EngagementFilter(
+    result_engs = EngagementByProductFilter(
         request.GET,
         queryset=Engagement.objects.filter(product=prod, active=True, status="In Progress", engagement_type=engagement_type).order_by('-updated'))
 
     engs = get_page_items(request, result_engs.qs, default_page_num, param_name="engs")
 
     # Engagements that are queued because they haven't started or paused
-    queued_engs = EngagementFilter(
+    queued_engs = EngagementByProductFilter(
         request.GET,
         queryset=Engagement.objects.filter(~Q(status="In Progress"), product=prod, active=True, engagement_type=engagement_type).order_by('-updated'))
 
     result_queued_engs = get_page_items(request, queued_engs.qs, default_page_num, param_name="queued_engs")
 
     # Cancelled or Completed Engagements
-    result = EngagementFilter(
+    result = EngagementByProductFilter(
         request.GET,
         queryset=Engagement.objects.filter(product=prod, active=False, engagement_type=engagement_type).order_by('-target_end'))
 
